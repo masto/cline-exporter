@@ -131,3 +131,10 @@ export interface ParsedConversation {
   metadata: RawTaskMetadata | null;
   summary: ConversationSummary;
 }
+
+export interface ExportOptions {
+  noCommands: boolean;
+  noFullPaths: boolean;
+  noFileContents: boolean;
+  projectRoot: string | null;
+}

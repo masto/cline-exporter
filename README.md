@@ -29,11 +29,14 @@ pnpm cline-exporter <conversation-dir> [--output <dir>]
 
 ### Arguments
 
-| Argument           | Description                                                       |
-| ------------------ | ----------------------------------------------------------------- |
-| `conversation-dir` | Path to a Cline conversation folder (contains `ui_messages.json`) |
-| `--output`, `-o`   | Output directory (default: `./cline-export-output`)               |
-| `--help`, `-h`     | Show help                                                         |
+| Argument             | Description                                                       |
+| -------------------- | ----------------------------------------------------------------- |
+| `conversation-dir`   | Path to a Cline conversation folder (contains `ui_messages.json`) |
+| `--output`, `-o`     | Output directory (default: `./cline-export-output`)               |
+| `--no-commands`      | Omit all command and command output messages                      |
+| `--no-full-paths`    | Strip absolute project-root prefixes from displayed file paths    |
+| `--no-file-contents` | Show file create/edit entries without embedded file contents      |
+| `--help`, `-h`       | Show help                                                         |
 
 ### Example
 
@@ -43,6 +46,12 @@ pnpm cline-exporter ~/Library/Application\ Support/Code/User/globalStorage/saoud
 
 # Specify output directory
 pnpm cline-exporter ./my-conversation -o ./exported-site
+
+# Privacy-friendly export
+pnpm cline-exporter ./my-conversation \
+  --no-commands \
+  --no-full-paths \
+  --no-file-contents
 
 # Open the result
 open ./cline-export-output/index.html

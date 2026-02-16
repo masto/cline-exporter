@@ -1,4 +1,8 @@
-import type { ParsedConversation, RawUiMessage } from "../types.js";
+import type {
+  ExportOptions,
+  ParsedConversation,
+  RawUiMessage,
+} from "../types.js";
 import {
   escapeHtml,
   formatCost,
@@ -36,6 +40,14 @@ const TRANSPARENT_SUBTYPES = new Set([
 interface ToolInfo {
   tool: string;
   path?: string;
+}
+
+function sanitizePath(path: string, options: ExportOptions): string {
+  if (!options.noFullPaths || !options.projectRoot) return path;
+  const root = options.projectRoot;
+  if (path === root) return ".";
+  if (path.startsWith(`${root}/`)) return path.slice(root.length + 1);
+  return path;
 }
 
 /** Try to extract tool name and path from a tool message's JSON text */
@@ -78,6 +90,7 @@ type Slot = MessageSlot | GroupSlot;
 function groupRenderedMessages(
   messages: RawUiMessage[],
   htmls: string[],
+  options: ExportOptions,
 ): Slot[] {
   const slots: Slot[] = [];
   let i = 0;
@@ -94,7 +107,7 @@ function groupRenderedMessages(
     const toolName = info.tool;
     const toolIndices: number[] = [i];
     const memberIndices: number[] = [i];
-    const paths: string[] = info.path ? [info.path] : [];
+    const paths: string[] = info.path ? [sanitizePath(info.path, options)] : [];
 
     let j = i + 1;
     while (j < messages.length) {
@@ -104,7 +117,7 @@ function groupRenderedMessages(
           // Same tool — extend the run
           toolIndices.push(j);
           memberIndices.push(j);
-          if (nextInfo.path) paths.push(nextInfo.path);
+          if (nextInfo.path) paths.push(sanitizePath(nextInfo.path, options));
           j++;
         } else {
           // Different tool — end the run
@@ -200,14 +213,15 @@ function renderSummaryHeader(conversation: ParsedConversation): string {
 export async function renderPage(
   conversation: ParsedConversation,
   outputDir: string,
+  options: ExportOptions,
 ): Promise<string> {
   const header = renderSummaryHeader(conversation);
   const rendered = await Promise.all(
-    conversation.messages.map((msg) => renderMessage(msg, outputDir)),
+    conversation.messages.map((msg) => renderMessage(msg, outputDir, options)),
   );
 
   // Group consecutive same-tool calls into collapsible summaries
-  const slots = groupRenderedMessages(conversation.messages, rendered);
+  const slots = groupRenderedMessages(conversation.messages, rendered, options);
   const messagesHtml = slots
     .map((slot) =>
       slot.kind === "single" ? slot.html : renderGroup(slot, rendered),

@@ -1,4 +1,8 @@
-import type { ApiReqStartedData, RawUiMessage } from "../types.js";
+import type {
+  ApiReqStartedData,
+  ExportOptions,
+  RawUiMessage,
+} from "../types.js";
 import {
   escapeHtml,
   formatCost,
@@ -15,7 +19,21 @@ interface ToolData {
   operationIsLocatedInWorkspace?: boolean;
 }
 
-function renderToolCall(text: string): string {
+function sanitizePath(path: string, options: ExportOptions): string {
+  if (!options.noFullPaths || !options.projectRoot) return path;
+  const root = options.projectRoot;
+  if (path === root) return ".";
+  if (path.startsWith(`${root}/`)) return path.slice(root.length + 1);
+  return path;
+}
+
+function sanitizeTextPaths(text: string, options: ExportOptions): string {
+  if (!options.noFullPaths || !options.projectRoot) return text;
+  const root = options.projectRoot;
+  return text.split(`${root}/`).join("").split(root).join(".");
+}
+
+function renderToolCall(text: string, options: ExportOptions): string {
   let data: ToolData;
   try {
     data = JSON.parse(text) as ToolData;
@@ -31,17 +49,25 @@ function renderToolCall(text: string): string {
 
   const toolName = data.tool ?? "unknown";
   const toolLabel = escapeHtml(toolName.replace(/([A-Z])/g, " $1").trim());
+  const displayPath = data.path ? sanitizePath(data.path, options) : undefined;
   const pathHtml = data.path
-    ? `<span class="tool-summary">${escapeHtml(data.path)}</span>`
+    ? `<span class="tool-summary">${escapeHtml(displayPath ?? data.path)}</span>`
     : "";
 
-  const hasContent = data.content && data.content.length > 0;
+  const hideContentForTool =
+    options.noFileContents &&
+    (toolName === "newFileCreated" || toolName === "editedExistingFile");
+
+  const hasContent =
+    !hideContentForTool && !!(data.content && data.content.length > 0);
   const contentPreview =
     hasContent && data.content
       ? data.content.length > 200
         ? data.content.slice(0, 200) + "…"
         : data.content
       : "";
+  const sanitizedPreview = sanitizeTextPaths(contentPreview, options);
+  const sanitizedContent = sanitizeTextPaths(data.content ?? "", options);
 
   return (
     `<div class="message tool-call">` +
@@ -52,8 +78,8 @@ function renderToolCall(text: string): string {
     `</div>` +
     (hasContent
       ? `<details class="tool-details">` +
-        `<summary>${escapeHtml(contentPreview)}</summary>` +
-        `<pre class="tool-params"><code>${escapeHtml(data.content ?? "")}</code></pre>` +
+        `<summary>${escapeHtml(sanitizedPreview)}</summary>` +
+        `<pre class="tool-params"><code>${escapeHtml(sanitizedContent)}</code></pre>` +
         `</details>`
       : "") +
     `</div>`
@@ -226,6 +252,7 @@ async function renderBrowserResult(
 export async function renderMessage(
   message: RawUiMessage,
   outputDir: string,
+  options: ExportOptions,
 ): Promise<string> {
   const text = message.text ?? "";
   const images = message.images ?? [];
@@ -277,9 +304,10 @@ export async function renderMessage(
       );
 
     case "tool":
-      return renderToolCall(text);
+      return renderToolCall(text, options);
 
     case "command": {
+      if (options.noCommands) return "";
       const cmdIcon = message.type === "ask" ? "❯" : "❯";
       return (
         `<div class="message command" data-ts="${message.ts}">` +
@@ -290,6 +318,7 @@ export async function renderMessage(
     }
 
     case "command_output":
+      if (options.noCommands) return "";
       if (!text) return "";
       return (
         `<div class="message command-output" data-ts="${message.ts}">` +
