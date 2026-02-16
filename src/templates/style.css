@@ -553,6 +553,80 @@ a:hover {
   padding: 0 !important;
 }
 
+/* ─── Filter Toolbar ─── */
+.filter-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1rem;
+  padding: 0.75rem 1rem;
+  margin-bottom: 1.5rem;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  align-items: center;
+}
+
+.filter-toolbar .filter-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+  margin-right: 0.25rem;
+}
+
+.filter-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+}
+
+.filter-toggle:hover {
+  color: var(--text);
+}
+
+.filter-toggle input[type="checkbox"] {
+  cursor: pointer;
+  accent-color: var(--accent);
+}
+
+/* ─── Filter Visibility Rules ─── */
+body.hide-thinking .reasoning {
+  display: none !important;
+}
+
+body.hide-browser .browser-action,
+body.hide-browser .browser-result {
+  display: none !important;
+}
+
+body.hide-tools .tool-call {
+  display: none !important;
+}
+
+body.hide-mcp .mcp-action {
+  display: none !important;
+}
+
+body.hide-progress .task-progress,
+body.hide-progress .checkpoint {
+  display: none !important;
+}
+
+body.hide-commands .command,
+body.hide-commands .command-output {
+  display: none !important;
+}
+
+body.hide-api .api-request {
+  display: none !important;
+}
+
 /* ─── Footer ─── */
 .conversation-footer {
   margin-top: 2rem;

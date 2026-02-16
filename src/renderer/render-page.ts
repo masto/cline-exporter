@@ -37,6 +37,17 @@ export async function renderPage(
   );
   const messagesHtml = rendered.filter((html) => html.length > 0).join("\n");
 
+  const filterToolbar = `<div class="filter-toolbar">
+      <span class="filter-label">Show:</span>
+      <label class="filter-toggle"><input type="checkbox" data-filter="thinking"> Thinking</label>
+      <label class="filter-toggle"><input type="checkbox" data-filter="browser"> Browser</label>
+      <label class="filter-toggle"><input type="checkbox" data-filter="tools"> Tools</label>
+      <label class="filter-toggle"><input type="checkbox" data-filter="mcp"> MCP</label>
+      <label class="filter-toggle"><input type="checkbox" data-filter="commands"> Commands</label>
+      <label class="filter-toggle"><input type="checkbox" data-filter="progress"> Progress</label>
+      <label class="filter-toggle"><input type="checkbox" data-filter="api"> API Stats</label>
+    </div>`;
+
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -44,10 +55,12 @@ export async function renderPage(
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Cline Conversation — ${conversation.summary.modelId}</title>
   <link rel="stylesheet" href="style.css">
+  <script src="script.js"></script>
 </head>
-<body>
+<body class="hide-progress hide-commands hide-api">
   <div class="container">
     ${header}
+    ${filterToolbar}
     <main class="conversation">
       ${messagesHtml}
     </main>
@@ -55,7 +68,6 @@ export async function renderPage(
       <p>Exported with <a href="https://github.com/cline/cline-exporter">cline-exporter</a></p>
     </footer>
   </div>
-  <script src="script.js"></script>
 </body>
 </html>`;
 }
