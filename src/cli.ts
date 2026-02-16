@@ -14,7 +14,7 @@ interface CliArgs {
 
 function printUsage(): void {
   console.log(`
-Usage: cline-export <conversation-dir> [options]
+Usage: cline-exporter <conversation-dir> [options]
 
 Arguments:
   conversation-dir    Path to a Cline conversation folder

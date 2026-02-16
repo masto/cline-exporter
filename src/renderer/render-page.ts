@@ -242,7 +242,7 @@ export async function renderPage(
       ${messagesHtml}
     </main>
     <footer class="conversation-footer">
-      <p>Exported with <a href="https://github.com/cline/cline-exporter">cline-exporter</a></p>
+      <p>Exported with <a href="https://github.com/masto/cline-exporter">cline-exporter</a></p>
     </footer>
   </div>
 </body>

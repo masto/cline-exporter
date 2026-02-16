@@ -4,9 +4,14 @@
   "description": "Convert Cline conversation history into a self-contained static website",
   "type": "module",
   "bin": {
+    "cline-exporter": "./dist/cli.js",
     "cline-export": "./dist/cli.js"
   },
+  "files": [
+    "dist/"
+  ],
   "scripts": {
+    "cline-exporter": "tsup --silent && node dist/cli.js",
     "build": "tsup",
     "dev": "tsup --watch",
     "lint": "eslint .",
@@ -14,7 +19,8 @@
     "format:check": "prettier --check .",
     "test": "vitest run",
     "test:watch": "vitest",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "prepublishOnly": "pnpm build"
   },
   "keywords": [
     "cline",
@@ -23,7 +29,11 @@
     "static-site"
   ],
   "author": "",
-  "license": "ISC",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/masto/cline-exporter.git"
+  },
   "packageManager": "pnpm@10.11.0",
   "dependencies": {
     "highlight.js": "^11.11.1",
