@@ -70,10 +70,28 @@ function buildSummary(
     }
   }
 
-  // Timestamps
-  const timestamps = messages.map((m) => m.ts);
-  const startTimestamp = Math.min(...timestamps);
-  const endTimestamp = Math.max(...timestamps);
+  // Timestamps — find the last "meaningful" message to avoid inflated duration
+  // from resume_completed_task entries added days later
+  const NOISE_SUBTYPES = new Set([
+    "resume_completed_task",
+    "resume_task",
+    "task_progress",
+    "checkpoint_created",
+    "api_req_started",
+  ]);
+
+  const startTimestamp = messages[0].ts;
+
+  // Walk backwards to find the last meaningful message
+  let endTimestamp = messages[messages.length - 1].ts;
+  for (let i = messages.length - 1; i >= 0; i--) {
+    const subtype = messages[i].say ?? messages[i].ask ?? "unknown";
+    if (!NOISE_SUBTYPES.has(subtype)) {
+      endTimestamp = messages[i].ts;
+      break;
+    }
+  }
+
   const durationMs = endTimestamp - startTimestamp;
 
   return {
