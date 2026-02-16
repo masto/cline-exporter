@@ -104,11 +104,13 @@ async function main(): Promise<void> {
     `✅ Parsed ${conversation.summary.messageCount} messages (${conversation.summary.apiRequestCount} API requests)`,
   );
 
-  // Render the HTML
-  const html = renderPage(conversation);
-
-  // Create output directory
+  // Create output directory (needed before rendering, since images are extracted during render)
   await mkdir(outputDir, { recursive: true });
+
+  // Render the HTML (this also extracts images to outputDir/images/)
+  const { resetImageCounter } = await import("./utils/images.js");
+  resetImageCounter();
+  const html = await renderPage(conversation, outputDir);
 
   // Write HTML
   await writeFile(join(outputDir, "index.html"), html, "utf-8");

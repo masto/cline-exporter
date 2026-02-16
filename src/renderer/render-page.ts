@@ -27,12 +27,15 @@ function renderSummaryHeader(conversation: ParsedConversation): string {
   );
 }
 
-export function renderPage(conversation: ParsedConversation): string {
+export async function renderPage(
+  conversation: ParsedConversation,
+  outputDir: string,
+): Promise<string> {
   const header = renderSummaryHeader(conversation);
-  const messagesHtml = conversation.messages
-    .map((msg) => renderMessage(msg))
-    .filter((html) => html.length > 0)
-    .join("\n");
+  const rendered = await Promise.all(
+    conversation.messages.map((msg) => renderMessage(msg, outputDir)),
+  );
+  const messagesHtml = rendered.filter((html) => html.length > 0).join("\n");
 
   return `<!DOCTYPE html>
 <html lang="en">

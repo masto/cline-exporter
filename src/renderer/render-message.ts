@@ -5,6 +5,7 @@ import {
   formatTimestamp,
   formatTokens,
 } from "../utils/html.js";
+import { extractDataUri, processImages } from "../utils/images.js";
 import { renderMarkdown } from "../utils/markdown.js";
 
 interface ToolData {
@@ -19,7 +20,6 @@ function renderToolCall(text: string): string {
   try {
     data = JSON.parse(text) as ToolData;
   } catch {
-    // Fallback: if not JSON, show raw
     return (
       `<div class="message tool-call">` +
       `<div class="tool-header"><span class="tool-icon">🔧</span><span class="tool-name">Tool</span></div>` +
@@ -35,7 +35,6 @@ function renderToolCall(text: string): string {
     ? `<span class="tool-summary">${escapeHtml(data.path)}</span>`
     : "";
 
-  // For file operations, show the content in a collapsible details
   const hasContent = data.content && data.content.length > 0;
   const contentPreview =
     hasContent && data.content
@@ -131,7 +130,6 @@ function renderApiReqStarted(text: string): string {
     return "";
   }
 
-  // Only show if there's meaningful cost/token data
   if (!data.cost && !data.tokensIn && !data.tokensOut) {
     return `<div class="message api-request"><span class="api-icon">⚡</span> API Request</div>`;
   }
@@ -155,9 +153,9 @@ function renderApiReqStarted(text: string): string {
   );
 }
 
-function renderImages(images: string[]): string {
-  if (images.length === 0) return "";
-  const imgTags = images
+function renderImageTags(imageSrcs: string[]): string {
+  if (imageSrcs.length === 0) return "";
+  const imgTags = imageSrcs
     .map(
       (src) =>
         `<div class="screenshot"><img src="${escapeHtml(src)}" alt="Screenshot" loading="lazy" /></div>`,
@@ -166,30 +164,96 @@ function renderImages(images: string[]): string {
   return `<div class="images">${imgTags}</div>`;
 }
 
-export function renderMessage(message: RawUiMessage): string {
+interface BrowserResultData {
+  screenshot?: string;
+  logs?: string;
+  currentUrl?: string;
+  currentMousePosition?: string;
+}
+
+/**
+ * Extract screenshot from browser_action_result JSON text.
+ * The text is JSON like: {"screenshot":"data:image/webp;base64,...","logs":"...","currentUrl":"..."}
+ */
+async function renderBrowserResult(
+  text: string,
+  images: string[],
+  outputDir: string,
+  ts: number,
+): Promise<string> {
+  let screenshotSrc = "";
+  let logs = "";
+  let currentUrl = "";
+
+  // Try to parse as JSON to extract screenshot
+  try {
+    const data = JSON.parse(text) as BrowserResultData;
+    if (data.screenshot) {
+      const extracted = await extractDataUri(data.screenshot, outputDir);
+      screenshotSrc = extracted ? extracted.relativePath : data.screenshot;
+    }
+    logs = data.logs ?? "";
+    currentUrl = data.currentUrl ?? "";
+  } catch {
+    // Not JSON — fall through to show as text
+  }
+
+  // Also process any images from the images array
+  const processedImages = await processImages(images, outputDir);
+
+  const allImages = screenshotSrc
+    ? [screenshotSrc, ...processedImages]
+    : processedImages;
+
+  const metaParts: string[] = [];
+  if (currentUrl) metaParts.push(`URL: ${escapeHtml(currentUrl)}`);
+
+  return (
+    `<div class="message browser-result" data-ts="${ts}">` +
+    `<div class="browser-header"><span class="browser-icon">🌐</span> Browser Result</div>` +
+    (metaParts.length > 0
+      ? `<div class="browser-meta">${metaParts.join(" · ")}</div>`
+      : "") +
+    renderImageTags(allImages) +
+    (logs
+      ? `<details class="tool-details"><summary>Console Logs</summary>` +
+        `<pre class="output-text"><code>${escapeHtml(logs)}</code></pre></details>`
+      : "") +
+    `</div>`
+  );
+}
+
+export async function renderMessage(
+  message: RawUiMessage,
+  outputDir: string,
+): Promise<string> {
   const text = message.text ?? "";
   const images = message.images ?? [];
   const subtype = message.say ?? message.ask ?? "unknown";
   const timestamp = formatTimestamp(message.ts);
 
   switch (subtype) {
-    case "task":
+    case "task": {
+      const processedImages = await processImages(images, outputDir);
       return (
         `<div class="message user-task" data-ts="${message.ts}">` +
         `<div class="message-header"><span class="role">User</span><time>${timestamp}</time></div>` +
         `<div class="message-body">${renderMarkdown(text)}</div>` +
-        renderImages(images) +
+        renderImageTags(processedImages) +
         `</div>`
       );
+    }
 
-    case "user_feedback":
+    case "user_feedback": {
+      const processedImages = await processImages(images, outputDir);
       return (
         `<div class="message user-feedback" data-ts="${message.ts}">` +
         `<div class="message-header"><span class="role">User</span><time>${timestamp}</time></div>` +
         `<div class="message-body">${renderMarkdown(text)}</div>` +
-        renderImages(images) +
+        renderImageTags(processedImages) +
         `</div>`
       );
+    }
 
     case "text":
       if (message.type === "say") {
@@ -216,7 +280,6 @@ export function renderMessage(message: RawUiMessage): string {
       return renderToolCall(text);
 
     case "command": {
-      // command can be either say or ask type
       const cmdIcon = message.type === "ask" ? "❯" : "❯";
       return (
         `<div class="message command" data-ts="${message.ts}">` +
@@ -249,25 +312,19 @@ export function renderMessage(message: RawUiMessage): string {
       return renderApiReqStarted(text);
 
     case "browser_action":
-    case "browser_action_launch":
+    case "browser_action_launch": {
+      const processedImages = await processImages(images, outputDir);
       return (
         `<div class="message browser-action" data-ts="${message.ts}">` +
         `<div class="browser-header"><span class="browser-icon">🌐</span> Browser Action</div>` +
         `<div class="message-body">${renderMarkdown(text)}</div>` +
-        renderImages(images) +
+        renderImageTags(processedImages) +
         `</div>`
       );
+    }
 
     case "browser_action_result":
-      return (
-        `<div class="message browser-result" data-ts="${message.ts}">` +
-        `<div class="browser-header"><span class="browser-icon">🌐</span> Browser Result</div>` +
-        (text
-          ? `<div class="message-body">${renderMarkdown(text)}</div>`
-          : "") +
-        renderImages(images) +
-        `</div>`
-      );
+      return renderBrowserResult(text, images, outputDir, message.ts);
 
     case "mcp_server_request_started":
     case "use_mcp_server":
@@ -292,13 +349,15 @@ export function renderMessage(message: RawUiMessage): string {
     case "resume_task":
       return `<div class="message resume" data-ts="${message.ts}"><span class="resume-icon">▶️</span> Task resumed</div>`;
 
-    default:
+    default: {
       if (!text && images.length === 0) return "";
+      const processedImages = await processImages(images, outputDir);
       return (
         `<div class="message generic" data-ts="${message.ts}">` +
         (text ? `<div class="message-body">${escapeHtml(text)}</div>` : "") +
-        renderImages(images) +
+        renderImageTags(processedImages) +
         `</div>`
       );
+    }
   }
 }
