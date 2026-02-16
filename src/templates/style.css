@@ -553,6 +553,56 @@ a:hover {
   padding: 0 !important;
 }
 
+/* ─── Tool Groups ─── */
+.tool-group {
+  background: var(--tool-bg);
+  border: 1px solid var(--tool-border);
+}
+
+.tool-group > details > summary.group-summary {
+  cursor: pointer;
+  display: flex;
+  align-items: baseline;
+  gap: 0.4rem;
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--text-muted);
+  user-select: none;
+  padding: 0.25rem 0;
+  flex-wrap: wrap;
+}
+
+.tool-group > details > summary.group-summary:hover {
+  color: var(--text);
+}
+
+.group-label {
+  color: var(--accent);
+}
+
+.group-count {
+  color: var(--text-subtle);
+  font-size: 0.8rem;
+}
+
+.group-paths {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--text-subtle);
+  font-weight: 400;
+}
+
+.group-items {
+  margin-top: 0.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.group-items .tool-call {
+  border-color: var(--border);
+}
+
 /* ─── Filter Toolbar ─── */
 .filter-toolbar {
   display: flex;
