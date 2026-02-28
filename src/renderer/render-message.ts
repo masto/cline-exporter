@@ -421,11 +421,25 @@ export async function renderMessage(
       );
       const processedImages = await processImages(images, outputDir);
       const allImages = [...imagePaths, ...processedImages];
+
+      const COLLAPSE_THRESHOLD = 300;
+      let textHtml = "";
+      if (cleanedText) {
+        if (cleanedText.length > COLLAPSE_THRESHOLD) {
+          const preview = cleanedText.slice(0, 120) + "…";
+          textHtml =
+            `<details class="tool-details">` +
+            `<summary>${escapeHtml(preview)}</summary>` +
+            `<pre class="tool-params"><code>${escapeHtml(cleanedText)}</code></pre>` +
+            `</details>`;
+        } else {
+          textHtml = `<div class="message-body">${escapeHtml(cleanedText)}</div>`;
+        }
+      }
+
       return (
         `<div class="message generic" data-ts="${message.ts}">` +
-        (cleanedText
-          ? `<div class="message-body">${escapeHtml(cleanedText)}</div>`
-          : "") +
+        textHtml +
         renderImageTags(allImages) +
         `</div>`
       );
