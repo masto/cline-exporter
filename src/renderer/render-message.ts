@@ -12,6 +12,41 @@ import {
 import { extractDataUri, processImages } from "../utils/images.js";
 import { renderMarkdown } from "../utils/markdown.js";
 
+/** Regex to find data: image URIs embedded in text. */
+const INLINE_DATA_URI_RE = /data:image\/\w+;base64,[^\s]+/g;
+
+interface InlineImageResult {
+  /** Text with data URIs stripped out and trimmed. */
+  cleanedText: string;
+  /** Relative paths to the extracted image files. */
+  imagePaths: string[];
+}
+
+/**
+ * Scan `text` for embedded base64 data URIs, extract each one to a file
+ * in `outputDir/images/`, and return the leftover text plus image paths.
+ */
+async function extractInlineDataUris(
+  text: string,
+  outputDir: string,
+): Promise<InlineImageResult> {
+  const matches = text.match(INLINE_DATA_URI_RE);
+  if (!matches) return { cleanedText: text, imagePaths: [] };
+
+  const imagePaths: string[] = [];
+  let cleaned = text;
+
+  for (const dataUri of matches) {
+    const extracted = await extractDataUri(dataUri, outputDir);
+    if (extracted) {
+      imagePaths.push(extracted.relativePath);
+      cleaned = cleaned.replace(dataUri, "");
+    }
+  }
+
+  return { cleanedText: cleaned.trim(), imagePaths };
+}
+
 interface ToolData {
   tool: string;
   path?: string;
@@ -380,11 +415,18 @@ export async function renderMessage(
 
     default: {
       if (!text && images.length === 0) return "";
+      const { cleanedText, imagePaths } = await extractInlineDataUris(
+        text,
+        outputDir,
+      );
       const processedImages = await processImages(images, outputDir);
+      const allImages = [...imagePaths, ...processedImages];
       return (
         `<div class="message generic" data-ts="${message.ts}">` +
-        (text ? `<div class="message-body">${escapeHtml(text)}</div>` : "") +
-        renderImageTags(processedImages) +
+        (cleanedText
+          ? `<div class="message-body">${escapeHtml(cleanedText)}</div>`
+          : "") +
+        renderImageTags(allImages) +
         `</div>`
       );
     }
